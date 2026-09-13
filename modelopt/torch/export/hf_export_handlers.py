@@ -21,8 +21,8 @@ import warnings
 import torch.nn as nn
 
 from .layer_utils import get_expert_linear_names, is_quantlinear, set_expert_quantizer_amax
-from .model_config import QUANTIZATION_NONE
 from .moe_utils import _export_fused_experts
+from .quant_format import QUANTIZATION_NONE
 from .quant_utils import get_quantization_format
 from .registry import ExportContext, ExportModuleRegistry, PrepareMoEInputsRegistry
 
@@ -56,7 +56,7 @@ def _export_weight(
 def _prepare_dbrx_experts(name: str, moe_module: nn.Module, ctx: ExportContext) -> None:
     """Fill missing input amax values for DBRX per-expert ModuleLists."""
     experts_mlp = moe_module.experts.mlp
-    for linear_name in get_expert_linear_names(moe_module):
+    for linear_name in get_expert_linear_names(moe_module, ctx.model_type):
         if hasattr(experts_mlp, linear_name):
             linear_modulelist = getattr(experts_mlp, linear_name)
             if hasattr(linear_modulelist, "__iter__"):
@@ -92,7 +92,7 @@ def _prepare_bmm_experts(name: str, moe_module: nn.Module, ctx: ExportContext) -
 )
 def _prepare_iterable_experts(name: str, moe_module: nn.Module, ctx: ExportContext) -> None:
     """Fill missing input amax values for iterable per-expert submodules."""
-    expert_linear_names = get_expert_linear_names(moe_module)
+    expert_linear_names = get_expert_linear_names(moe_module, ctx.model_type)
     linear_name = None
     try:
         for linear_name in expert_linear_names:
